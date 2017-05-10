@@ -13,14 +13,32 @@ GLfloat xs, ys, zs, ss; //center and size of sphere
 GLfloat near, far;
 GLfloat eyeX, eyeY, eyeZ; 
 GLfloat centerX, centerY, centerZ;
+GLfloat rotX, rotY, rotZ;
+GLfloat transX, transY, transZ;
 GLfloat viewRadius;
+GLfloat rotT; // torus rotation
 GLint upX, upY, upZ;
 float alpha, beta;
 
 
 void drawPiramide(GLfloat x, GLfloat y, GLfloat z, GLfloat s);
-void drawCylinder(GLfloat x, GLfloat y, GLfloat z, GLfloat s);
-void drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat s);
+//void drawCylinder(GLfloat x, GLfloat y, GLfloat z, GLfloat s);
+//void drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat s);
+
+void transformation(){
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glFrustum(-10.0f, 10.0f, -10.0f, 10.0f, near, far);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ);
+
+	glTranslatef(transX, transY, transZ);
+	glRotatef(rotX, 1, 0, 0);
+	glRotatef(rotY, 0, 1, 0);
+	glRotatef(rotZ, 0, 0, 1);
+}
 
 void initialization(){
 	
@@ -32,34 +50,30 @@ void initialization(){
 	beta = 0;
 	eyeX = 0.0f;
 	eyeY = 0.0f;
-	eyeZ = 200.0f;
-	centerX = 0.0f;
+	eyeZ = 0.0f;
+	centerX = 1.0f;
 	centerY = 0.0f;
 	centerZ = 0.0f;
 	xp = yp = zp = 0.0f;
 	sp = 30.0f;
-	upY = 1;
-	upZ = 0;
-	upX = 0;
-}
-
-void visualization(){
-	
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glFrustum(-10.0f, 10.0f, -10.0f, 10.0f, near, far);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	gluLookAt(eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ);
-
+	upY = 1.0f;
+	upZ = 0.0f;
+	upX = 0.0f;
+	transX = 0.0f;
+	transY = 0.0f;
+	transZ = 0.0f;
+	rotX = 0.0f;
+	rotY = 0.0f;
+	rotZ = 0.0f;
+	rotT = 0.0f;
 }
 
 void draw(){
 	
+	transformation();
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	//glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		
-	visualization();
 	
 	/*
 	glColor3f(0, 0, 1);
@@ -69,23 +83,24 @@ void draw(){
 	glVertex3f(0,1, 0);
 	glEnd();
 	*/
-
+	glPushMatrix();
 	glColor3f(1.0f, 1.0f, 0.0f);
-	//glutWireSphere(50, 10, 10);
+	glRotatef(rotT, 1, 0, 0);
 	glTranslatef(50, 50, 0);
-	//glutWireCone(20, 40, 10, 10);
 	glutWireTorus(8, 10, 16, 16);
-	glTranslatef(-50, -50, 0);
-//	glLoadIdentity();
-	drawPiramide(xp, yp, zp, sp);
+	glPopMatrix();
 
-	glFlush();
+	glPushMatrix();
+	glColor3f(0.0f, 1.0f, 0.0f);
+	drawPiramide(xp, yp, zp, sp);
+	glPopMatrix();
+	
+	glutWireSphere(50, 10, 10);
+
 	glutSwapBuffers();
 }
 
 void drawPiramide(GLfloat x, GLfloat y, GLfloat z, GLfloat s){
-	
-	glColor3f(0.0f, 1.0f, 0.0f);
 	
 	//draw base
 	glBegin(GL_POLYGON);
@@ -137,15 +152,22 @@ void keyboard(unsigned char key, int x, int y){
 		case 27:
 			exit(0);
 		
-		case 'z':
-			upZ = 1;
-			upY = 0;
+		case 'w': //front
+			transX -= 5;
 			break;
-		case 'x':
-			upX = 1;
-			upY = 0;
+		case 's': //back
+			transX += 5;
+			break;
+		case 'a': //left
+			transZ += 3;
+			break;
+		case 'd': //right
+			transZ -= 3;
 			break;
 
+		case '1': //torus rotation
+			rotT += 5;
+			break;
 	}
 
 	glutPostRedisplay();
@@ -155,6 +177,7 @@ void specialKeyboard(int key, int x, int y){
 
 	switch(key){
 		case GLUT_KEY_UP:
+			/*
 			alpha += PI/36;
 		
 			if(alpha >= 2*PI){
@@ -170,7 +193,7 @@ void specialKeyboard(int key, int x, int y){
 				alpha += PI/36;
 				upY = -1;
 			}
-
+*/
 		 	/*
 			if(alpha > 12.1*PI/36 && alpha < 14*PI/36){
 				upZ = -1;
@@ -181,20 +204,23 @@ void specialKeyboard(int key, int x, int y){
 				upY = -1;
 			}
 			*/
-			eyeY = viewRadius*sin(alpha);
-			eyeZ = viewRadius*cos(alpha);
+			//eyeY = viewRadius*sin(alpha);
+			//eyeZ = viewRadius*cos(alpha);
 			
 			//eyeY += 5;
+
+			rotZ += 5;
 			break;
 		case GLUT_KEY_DOWN:
-			eyeY -= 5;
+			//eyeY -= 5;
+			rotZ -= 5;
 			break;
 		case GLUT_KEY_LEFT:
 			//eyeX += 200*PI/36;
-			eyeX += 5;
+			rotY += 5;
 			break;
 		case GLUT_KEY_RIGHT:
-			eyeX -= 5;
+			rotY -= 5;
 			break;
 	}
 
@@ -213,12 +239,12 @@ int main(int argc, char *argv[]){
 	glutInitWindowSize(WIN_W, WIN_H);
 	glutCreateWindow("T2_SCC0250");
 
-	initialization();
-
 	glutDisplayFunc(draw);
 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(specialKeyboard);
 	glutMouseFunc(mouse);
+	
+	initialization();
 
 	glutMainLoop();
 
