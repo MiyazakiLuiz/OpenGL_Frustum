@@ -3,28 +3,37 @@
 #include <GL/glut.h>
 
 #define PI 3.1415
+#define TIMING 1
 
-int WIN_W = 800;
-int WIN_H = 680;
+int WIN_W = 800; //window width
+int WIN_H = 680; //window height
 
 GLfloat xp, yp, zp, sp; //center and size of piramide base
 GLfloat xc, yx, zc, sc; //center and size of cylinder base
 GLfloat xs, ys, zs, ss; //center and size of sphere
-GLfloat near, far;
-GLfloat eyeX, eyeY, eyeZ; 
-GLfloat centerX, centerY, centerZ;
-GLfloat rotX, rotY, rotZ;
-GLfloat transX, transY, transZ;
-GLfloat viewRadius;
-GLfloat rotT; // torus rotation
-GLint upX, upY, upZ;
+GLfloat near, far; //used in frustum
+GLfloat eyeX, eyeY, eyeZ; //eye of  lookAt
+GLfloat centerX, centerY, centerZ; //center of  lookAt
+GLfloat rotX, rotY, rotZ; //used for rotation of the scene
+GLfloat transX, transY, transZ; //used for translation of the scene
+GLfloat viewRadius; 
+GLfloat rotT; //torus rotation
+GLfloat scaP; //piramide scale
+GLfloat transSX, transSY, transSZ; //sphere translation
+GLint upX, upY, upZ; //orientation of lookAt
 float alpha, beta;
+int updT; //flag used for know if torus is rotating
+int updP; //flag used for know if piramide is scaling
+int scaPD; //flag used for determinter direction of the piramide scale
 
-
+/**
+ * Draw a piramide with center in (x, y, z) and size s
+ */
 void drawPiramide(GLfloat x, GLfloat y, GLfloat z, GLfloat s);
-//void drawCylinder(GLfloat x, GLfloat y, GLfloat z, GLfloat s);
-//void drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat s);
 
+/**
+ * Realize transformations on the scene
+ */
 void transformation(){
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -40,11 +49,14 @@ void transformation(){
 	glRotatef(rotZ, 0, 0, 1);
 }
 
+/**
+ * Set up initial variables, optionally reset pressing the r key
+ */
 void initialization(){
 	
 	glEnable(GL_DEPTH_TEST);
 	near = 10.0f;
-	far = 300.0f;
+	far = 1000.0f;
 	viewRadius = 200.0f;
 	alpha = 0;
 	beta = 0;
@@ -59,57 +71,113 @@ void initialization(){
 	upY = 1.0f;
 	upZ = 0.0f;
 	upX = 0.0f;
-	transX = 0.0f;
+	transX = 150.0f;
 	transY = 0.0f;
 	transZ = 0.0f;
-	rotX = 0.0f;
-	rotY = 0.0f;
-	rotZ = 0.0f;
+	rotX = -45.0f;
+	rotY = 45.0f;
+	rotZ = 45.0f;
 	rotT = 0.0f;
+	scaP = 1.0f;
+	transSX = 0.0f;
+	transSY = 0.0f;
+	transSZ = 0.0f;
+	updT = -1;
+	updP = -1;
+	scaPD = 1;
 }
 
+/**
+ * Draw a grid on the plan xz and the axes x, y, z
+ */
+void drawGrid(){
+
+	glColor3f(0.7f, 0.7f, 0.7f);
+	glLineWidth(2.0f);
+	glBegin(GL_LINES);
+	
+	//X axis
+	glVertex3f(-200.0f, 0.0f, 0.0f);
+	glVertex3f(200.0f, 0.0f, 0.0f);
+	
+	//Y axis
+	glVertex3f(0.0f, -200.0f, 0.0f);
+	glVertex3f(0.0f, 200.0f, 0.0f);
+
+	//Z axis
+	glVertex3f(0.0f, 0.0f, -200.0f);
+	glVertex3f(0.0f, 0.0f, 200.0f);
+	glEnd();
+
+
+	glLineWidth(0.7f);
+	glBegin(GL_LINES);
+	int i;
+	for(i = -200; i<200; i+=5){
+		//paint lines below or above the sphere
+		if(i > transSX-50 && i < transSX-10)	glColor3f(0.3f, 0.3f, 1.0f);
+		else glColor3f(0.3f, 0.3f, 0.3f);
+		glVertex3f(i, 0.0f, -200.0f);
+		glVertex3f(i, 0.0f, 200.0f);
+	}
+	for(i = -200; i<200; i+=5){
+		//paint lines below or above the sphere
+		if(i > transSZ-60 && i < transSZ-20)	glColor3f(0.3f, 0.3f, 1.0f);
+		else glColor3f(0.3f, 0.3f, 0.3f);
+		glVertex3f(-200.0f, 0.0f, i);
+		glVertex3f(200.0f, 0.0f, i);
+	}
+	glEnd();
+
+}
+
+/**
+ * Draw objects
+ */
 void draw(){
 	
 	transformation();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	
-	/*
-	glColor3f(0, 0, 1);
-	glBegin(GL_POLYGON);
-	glVertex3f(0, 0, 0);
-	glVertex3f(1, 0, 0);
-	glVertex3f(0,1, 0);
-	glEnd();
-	*/
+	drawGrid();
+
+	//torus
 	glPushMatrix();
 	glColor3f(1.0f, 1.0f, 0.0f);
-	glRotatef(rotT, 1, 0, 0);
 	glTranslatef(50, 50, 0);
+	glRotatef(rotT, 1, 0, 0);
 	glutWireTorus(8, 10, 16, 16);
+	glColor3f(0.3f, 0.3f, 0.0f);
+	glutSolidTorus(7.9, 10, 16, 16);
 	glPopMatrix();
 
+	//piramide
 	glPushMatrix();
-	glColor3f(0.0f, 1.0f, 0.0f);
+	glColor3f(0.8f, 0.0f, 0.0f);
+	glTranslatef(-50, 20, 50);
+	glScalef(scaP, scaP, scaP);
 	drawPiramide(xp, yp, zp, sp);
 	glPopMatrix();
 	
-	glutWireSphere(50, 10, 10);
+	//sphere
+	glPushMatrix();
+	glColor3f(0.5f, 0.5f, 0.5f);
+	glTranslatef(transSX, transSY, transSZ);
+	glTranslatef(-30, 20, -40);
+	glutWireSphere(15, 15, 15);
+	glColor3f(0.1f, 0.1f, 0.5f);
+	glutSolidSphere(15, 15, 15);
+	glPopMatrix();
 
 	glutSwapBuffers();
 }
 
+/**
+ * Draw a piramide with center in (x, y, z) and size s
+ */
 void drawPiramide(GLfloat x, GLfloat y, GLfloat z, GLfloat s){
 	
-	//draw base
-	glBegin(GL_POLYGON);
-	glVertex3f(x, y-s/3, z+2*s/3);
-	glVertex3f(x-s/2, y-s/3, z-s/3);
-	glVertex3f(x+s/2, y-s/3, z-s/3);
-	glEnd();
-	
-	glColor3f(1.0f, 0.0f, 0.0f);
 	//draw face 1
 	glBegin(GL_POLYGON);
 	glVertex3f(x, y+2*s/3, z);
@@ -131,8 +199,16 @@ void drawPiramide(GLfloat x, GLfloat y, GLfloat z, GLfloat s){
 	glVertex3f(x+s/2, y-s/3, z-s/3);
 	glEnd();
 
+	glColor3f(0.0f, 0.8f, 0.0f);
+	//draw base
+	glBegin(GL_POLYGON);
+	glVertex3f(x, y-s/3, z+2*s/3);
+	glVertex3f(x-s/2, y-s/3, z-s/3);
+	glVertex3f(x+s/2, y-s/3, z-s/3);
+	glEnd();
+	
 	//draw edges
-	glColor3f(0.5f, 0.5f, 0.5f);
+	glColor3f(0.7f, 0.7f, 0.7f);
 	glLineWidth(s/10);
 	glBegin(GL_LINE_STRIP);
 	glVertex3f(x, y-s/3, z+2*s/3);
@@ -146,27 +222,93 @@ void drawPiramide(GLfloat x, GLfloat y, GLfloat z, GLfloat s){
 	glEnd();
 }
 
-void keyboard(unsigned char key, int x, int y){
+/**
+ * Function used for make the piramide and torus animation
+ */
+void update(int x){
 	
-	switch(key){
-		case 27:
-			exit(0);
+	if(updT == 1 || updP == 1){
+		if(updT == 1){
+			rotT += 1;
+		}
+		if(updP == 1){
+			scaP += 0.025*scaPD;
+			if(scaPD == 1 && scaP >= 1.5) scaPD *= -1;
+			else if(scaPD == -1 && scaP <= 0.1) scaPD *= -1;
+		}
 		
-		case 'w': //front
-			transX -= 5;
+		glutTimerFunc(TIMING, update, 0);
+	}
+	else{
+		return;
+	}
+
+ 	glutPostRedisplay();
+}
+
+/**
+ * Recieve keys and make actions
+ */
+void keyboard(unsigned char key, int x, int y){
+
+	switch(key){
+		//esc
+		case 27: 
+			exit(0);
+
+		//rotations of the scene
+		case 'w':
+			rotZ += 5;
 			break;
-		case 's': //back
-			transX += 5;
+		case 's':
+			rotZ -= 5;
 			break;
-		case 'a': //left
-			transZ += 3;
+		case 'a':
+			rotY += 5;
 			break;
-		case 'd': //right
-			transZ -= 3;
+		case 'd':
+			rotY -= 5;
+			break;
+		case 'q':
+			rotX += 5;
+			break;
+		case 'e':
+			rotX -= 5;
 			break;
 
 		case '1': //torus rotation
-			rotT += 5;
+			updT *= -1;
+			if(updT == 1 && updP == -1) update(0);
+			break;
+
+		case '2': //piramide scale
+			updP *= -1;
+			if(updT == -1 && updP == 1) update(0);
+			break;
+
+		//sphere translation
+		case 'u':
+			transSX += 2;
+			break;
+		case 'h': 
+			transSZ -= 2;
+			break;
+		case 'j': 
+			transSX -= 2;
+			break;
+		case 'k': 
+			transSZ += 2;
+			break;
+		case 'n': 
+			transSY -= 2;
+			break;
+		case 'm': 
+			transSY += 2;
+			break;
+
+		//reset
+		case 'r':
+			initialization();
 			break;
 	}
 
@@ -176,74 +318,64 @@ void keyboard(unsigned char key, int x, int y){
 void specialKeyboard(int key, int x, int y){
 
 	switch(key){
-		case GLUT_KEY_UP:
-			/*
-			alpha += PI/36;
-		
-			if(alpha >= 2*PI){
-				alpha = 0;
-			}
-			else if(alpha >= 3*PI/2){
-				if(upY == -1){
-					alpha += PI/36;
-					upY = 1;
-				}
-			}
-			else if(upY == 1 && alpha >= PI/2){
-				alpha += PI/36;
-				upY = -1;
-			}
-*/
-		 	/*
-			if(alpha > 12.1*PI/36 && alpha < 14*PI/36){
-				upZ = -1;
-				upY = 0;
-			}
-			else if(alpha > PI/2){
-				upZ = 0;
-				upY = -1;
-			}
-			*/
-			//eyeY = viewRadius*sin(alpha);
-			//eyeZ = viewRadius*cos(alpha);
-			
-			//eyeY += 5;
 
-			rotZ += 5;
+		case GLUT_KEY_UP: //front (zoom in)
+			transX -= 5;
 			break;
-		case GLUT_KEY_DOWN:
-			//eyeY -= 5;
-			rotZ -= 5;
+		case GLUT_KEY_DOWN: //back (zoom out)
+			transX += 5;
 			break;
-		case GLUT_KEY_LEFT:
-			//eyeX += 200*PI/36;
-			rotY += 5;
+		case GLUT_KEY_LEFT: //left
+			transZ += 5;
 			break;
-		case GLUT_KEY_RIGHT:
-			rotY -= 5;
+		case GLUT_KEY_RIGHT: //right
+			transZ -= 5;
 			break;
 	}
 
 	glutPostRedisplay();
 }
 
-void mouse(int click, int state, int x, int y){
-
+/**
+ * Called when the window size is changed
+ */
+void reshape(GLint width, GLint height){
+	glViewport(0, 0, width, height);
+	transformation();
 }
 
 int main(int argc, char *argv[]){
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-	glutInitWindowPosition((glutGet(GLUT_SCREEN_WIDTH) - WIN_W)/2, (glutGet(GLUT_SCREEN_HEIGHT) - WIN_H)/2);
+	glutInitWindowPosition((glutGet(GLUT_SCREEN_WIDTH) - WIN_W)/2, (glutGet(GLUT_SCREEN_HEIGHT) - WIN_H)/2); //centralize windows
 	glutInitWindowSize(WIN_W, WIN_H);
 	glutCreateWindow("T2_SCC0250");
 
+	printf("\n\nCommands:\n\n\
+Up: Zoom in\n\
+Down: Zoom out\n\
+Left, Right: Move scene\n\n\
+w, a, s, d, q, e: Rotations\n\n\
+1: Turn on/off Torus Spin\n\
+2: Turn on/off Piramide Resize\n\
+u, h, j, k, n, m: Sphere Translations\n\n\
+r: Reset\n\n\
+esc: Exit\n\n\
+Developers:\n\
+Danilo Francoso Tedeschi\n\
+Douglas Amorim de Oliveira\n\
+Luiz Massao Miyazaki\n\
+Rafael Kenji Nissi\n\n\
+");
+
+	//callbacks
 	glutDisplayFunc(draw);
 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(specialKeyboard);
-	glutMouseFunc(mouse);
-	
+	glutReshapeFunc(reshape);
+
+	//set up variables
 	initialization();
 
 	glutMainLoop();
